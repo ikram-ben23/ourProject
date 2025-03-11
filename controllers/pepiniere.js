@@ -6,6 +6,7 @@ const multer=require("multer");
 const path = require("path");
 const nodemailer=require("nodemailer");
 const crypto=require("crypto");
+const validator=require("validator");
 
 
 
@@ -34,29 +35,42 @@ const fileFilter = (req, file, cb) => {
 // Multer Upload Middleware
 const upload = multer({ storage: storage, fileFilter: fileFilter });
 
-// Register Pépinière Function
+exports.upload = upload;
+
+
 exports.registerPepiniere = async (req, res) => {
     try {
-        const { name, ownerName, email, phone, address, password, description } = req.body;
-        const profilePicture = req.file ? req.file.path : null; // Get the uploaded file path
+        const { name, ownerName, email, phone, address, description, password, profilePicture } = req.body;
 
-        // Check if email already exists
-        const existingPepiniere = await Pepiniere.findOne({ email });
-        if (existingPepiniere) {
-            return res.status(400).json({ message: "Email already registered!" });
+        // 🔹 Validate required fields
+        if (!name || !ownerName || !email || !phone || !address || !password) {
+            return res.status(400).json({ error: "All fields are required" });
         }
 
-        // Validate password (min 8 characters, must contain letters & numbers)
-        const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/;
+        // 🔹 Validate email format
+        if (!validator.isEmail(email.trim())) {
+            return res.status(400).json({ error: "Invalid email format" });
+        }
+
+        // 🔹 Validate strong password
+        const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
         if (!passwordRegex.test(password)) {
-            return res.status(400).json({ message: "Password must be at least 8 characters long and contain both letters and numbers." });
+            return res.status(400).json({ 
+                error: "Password must be at least 8 characters long and include at least one uppercase letter, one lowercase letter, one number, and one special character." 
+            });
         }
 
-        // Hash Password
+        // 🔹 Check if email already exists
+        const existingPepiniere = await Pepiniere.findOne({ email: email.trim() });
+        if (existingPepiniere) {
+            return res.status(400).json({ error: "Email is already registered" });
+        }
+
+        // 🔹 Hash password before saving
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
 
-        // Create new Pépinière
+        // 🔹 Create a new Pépinière
         const newPepiniere = new Pepiniere({
             name: name.trim(),
             ownerName: ownerName.trim(),
@@ -64,76 +78,110 @@ exports.registerPepiniere = async (req, res) => {
             phone: phone.trim(),
             address: address.trim(),
             description: description?.trim(),
-            password: hashedPassword,
-            profilePicture, // Save the image path
+            password: hashedPassword, // Save hashed password
+            profilePicture,
             status: "pending"
         });
 
-        // Save to Database
         await newPepiniere.save();
-
-        res.status(201).json({ message: "Pépinière registered successfully!", data: newPepiniere });
+        res.status(201).json({ message: "Pépinière registered successfully! Waiting for admin approval." });
 
     } catch (error) {
         console.error("Error in registerPepiniere:", error);
-        res.status(500).json({ message: "Internal server error", error });
+        res.status(500).json({ error: "Server error" });
     }
 };
-exports.upload = upload;
-
 
 
 exports.loginPepiniere = async (req, res) => {
     try {
         const { email, password } = req.body;
 
-        // Find Pépinière by email
-        const existingPepiniere = await Pepiniere.findOne({ email });
-        if (!existingPepiniere) {
-            return res.status(404).json({ message: "Pépinière not found!" });
+        if (!email || !password) {
+            return res.status(400).json({ error: "Email and password are required" });
         }
 
-        // Compare password
-        const isMatch = await bcrypt.compare(password, existingPepiniere.password);
+        const pepiniere = await Pepiniere.findOne({ email });
+        if (!pepiniere) {
+            return res.status(400).json({ error: "Invalid email or password" });
+        }
+
+        const isMatch = await bcrypt.compare(password, pepiniere.password);
         if (!isMatch) {
-            return res.status(400).json({ message: "Invalid credentials!" });
+            return res.status(400).json({ error: "Invalid email or password" });
         }
 
-        // Check if Pépinière is approved
-        if (existingPepiniere.status !== "approved") {
-            return res.status(403).json({ message: "Your account is pending approval!" });
+        if (pepiniere.status !== "approved") {
+            return res.status(403).json({ error: "Your account is not approved yet." });
         }
 
-        // Generate JWT token
-        const token = jwt.sign({ id: existingPepiniere._id }, process.env.SECRET_KEY, { expiresIn: "1h" });
+        const token = jwt.sign({ id: pepiniere._id }, process.env.SECRET_KEY, { expiresIn: "7d" });
 
-        res.status(200).json({
-            message: "Login successful!",
-            token,
-            pepiniere: {
-                id: existingPepiniere._id,
-                name: existingPepiniere.name,
-                email: existingPepiniere.email,
-                phone: existingPepiniere.phone,
-                address: existingPepiniere.address
-            }
-        });
+        res.status(200).json({ message: "Login successful", token });
 
     } catch (error) {
-        console.error("Error in loginPepiniere:", error);
-        res.status(500).json({ message: "Internal server error", error });
+        res.status(500).json({ error: "Server error" });
+    }
+};
+
+// Forgot Password
+exports.forgotPassword = async (req, res) => {
+    try {
+        const { email } = req.body;
+        const user = await Pepiniere.findOne({ email });
+
+        if (!user) return res.status(404).json({ error: "No user found with this email" });
+
+        const resetToken = crypto.randomBytes(32).toString("hex");
+        user.resetPasswordToken = resetToken;
+        user.resetPasswordExpires = Date.now() + 3600000; // 1 hour
+
+        await user.save();
+
+        // Send email with reset link
+        let transporter = nodemailer.createTransport({
+            service: "gmail",
+            auth: { user: process.env.EMAIL, pass: process.env.EMAIL_PASSWORD }
+        });
+
+        let mailOptions = {
+            to: user.email,
+            subject: "Password Reset Request",
+            text: `Use this token to reset your password: ${resetToken}`
+        };
+
+        transporter.sendMail(mailOptions);
+
+        res.json({ message: "Password reset token sent!" });
+
+    } catch (error) {
+        res.status(500).json({ error: "Server error" });
+    }
+};
+// Reset Password
+exports.resetPasswordPepiniere= async (req, res) => {
+    try {
+        const { token, newPassword } = req.body;
+        const user = await Pepiniere.findOne({ resetPasswordToken: token, resetPasswordExpires: { $gt: Date.now() } });
+
+        if (!user) return res.status(400).json({ error: "Invalid or expired token" });
+
+        const salt = await bcrypt.genSalt(10);
+        user.password = await bcrypt.hash(newPassword, salt);
+        user.resetPasswordToken = undefined;
+        user.resetPasswordExpires = undefined;
+
+        await user.save();
+
+        res.json({ message: "Password reset successful!" });
+
+    } catch (error) {
+        res.status(500).json({ error: "Server error" });
     }
 };
 
 
-exports.logoutPepiniere = (req, res) => {
-    res.send("Pépinière registered successfully!");
-};
 
-exports.resetPasswordPepiniere = (req, res) => {
+/*exports.logoutPepiniere = (req, res) => {
     res.send("Pépinière registered successfully!");
-};
-
-exports.tokenResetPswdPepiniere = (req, res) => {
-    res.send("Pépinière registered successfully!");
-};
+};*/
