@@ -8,8 +8,8 @@ router.post('/register',pepiniereController.upload.single("profilePicture"), pep
 router.post('/login', pepiniereController.loginPepiniere/* Login and get token */);
 router.post('/forgotpassword',pepiniereController.forgotPassword );
 //router.post('/logout',pepiniereController.logoutPepiniere /* Logout */);
-//router.post('/forgot-password',pepiniereController.resetPasswordPepiniere/* Send reset password link */);
-//router.post('/reset-password/:token', pepiniereController.tokenResetPswdPepiniere/* Reset password using token */);
+router.post('/forgot-password',pepiniereController.resetPasswordPepiniere/* Send reset password link */);
+
 
 
 
