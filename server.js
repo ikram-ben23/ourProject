@@ -7,6 +7,9 @@ const jwt = require("jsonwebtoken");
 const path = require("path");
 const pepiniereRoutes = require("./routes/pepiniere");
 const connectDB = require("./config/db");
+const adminRoutes=require('./routes/admin');
+
+
 
 
 connectDB();
@@ -24,6 +27,7 @@ app.get("/", (req, res) => {
 });
 
 app.use("/pepiniere", pepiniereRoutes); 
+app.use("/admin",adminRoutes);
 
 // Start the server
 app.listen(PORT, () => {

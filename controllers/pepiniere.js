@@ -40,7 +40,6 @@ exports.upload = upload;
 
 exports.registerPepiniere = async (req, res) => {
     try {
-        console.log("Received Data:", req.body);
         const { name, ownerName, email, phone, address, description, password} = req.body;
         const profilePicture = req.file ? req.file.filename : null
 
@@ -68,6 +67,8 @@ exports.registerPepiniere = async (req, res) => {
             return res.status(400).json({ error: "Email is already registered" });
         }
 
+        
+
         // Hash password before saving
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
@@ -86,7 +87,29 @@ exports.registerPepiniere = async (req, res) => {
         });
 
         await newPepiniere.save();
-        res.status(201).json({ message: "Pépinière registered successfully! Waiting for admin approval." });
+        
+
+        // generate jwt
+        const token = jwt.sign(
+            { id: newPepiniere._id, role: "pepiniere", status: newPepiniere.status },
+            process.env.SECRET_KEY,
+            { expiresIn: "7d" }
+        );
+
+        res.status(201).json({ 
+            message: "Pépinière registered successfully! Waiting for admin approval.", 
+            token,
+            user: {
+                id: newPepiniere._id,
+                name: newPepiniere.name,
+                ownerName: newPepiniere.ownerName,
+                email: newPepiniere.email,
+                phone: newPepiniere.phone,
+                profilePicture: newPepiniere.profilePicture,
+                status: newPepiniere.status
+            }
+        });
+
 
     } catch (error) {
         console.error("Error in registerPepiniere:", error);
@@ -114,12 +137,29 @@ exports.loginPepiniere = async (req, res) => {
         }
 
         if (pepiniere.status !== "approved") {
-            return res.status(403).json({ error: "Your account is not approved yet." });
+            return res.status(200).json({ message: "Your account is not approved yet.Please wait for admin approval" });
         }
 
-        const token = jwt.sign({ id: pepiniere._id }, process.env.SECRET_KEY, { expiresIn: "7d" });
+          // Generate JWT Token
+          const token = jwt.sign(
+            { id: pepiniere._id, role: "pepiniere", status: pepiniere.status },
+            process.env.SECRET_KEY,
+            { expiresIn: "7d" }
+        );
 
-        res.status(200).json({ message: "Login successful", token });
+        res.status(200).json({ 
+            message: "Login successful", 
+            token,
+            user: {
+                id: pepiniere._id,
+                name: pepiniere.name,
+                ownerName: pepiniere.ownerName,
+                email: pepiniere.email,
+                phone: pepiniere.phone,
+                profilePicture: pepiniere.profilePicture,
+                status: pepiniere.status
+            }
+        });
 
     } catch (error) {
         res.status(500).json({ error: "Server error" });

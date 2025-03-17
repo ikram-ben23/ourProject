@@ -12,6 +12,7 @@ const pepiniereSchema = new mongoose.Schema({
     profilePicture:{type: String },
     status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
     createdAt: { type: Date, default: Date.now },
+    rejection:{type:String,default:null},//modify it apres
     resetPasswordToken: { type: String }, // Stores the hashed reset token
     resetPasswordExpires: { type: Date } 
 });
