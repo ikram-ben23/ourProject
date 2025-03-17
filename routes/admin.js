@@ -12,11 +12,11 @@ router.get('/pending', adminController.pendingPepinieres);
 router.put('/approve/:id', adminController.approve);
 router.put('/reject/:id',adminController.reject);
 router.get('/approved', adminController.allPepinieres);
-router.get('/:id', adminController.pepiniere);
-router.delete('/delete/:id',adminController.deletePepiniere);
+router.get('/:id', adminController.onePepiniere);
+router.delete('/delete/:id',adminController.deletePepiniere);//delete only for approved pepiniere
 
 // Campaign Management Routes
-router.post('/campaigns', /*create compaign */);
+router.post('/createCampaign', adminController.createCampaign);
 router.get('/campaigns', /*get all compaigns */);
 router.get('/campaigns/:id', /*get all compaigns by id */);
 router.put('/campaigns/:id', /*update compaign */);

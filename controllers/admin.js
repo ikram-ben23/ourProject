@@ -4,7 +4,8 @@ const jwt = require("jsonwebtoken");
 const nodemailer=require('nodemailer');
 const crypto=require("crypto");
 const { findOne } = require("../models/pepiniere");
-const pepiniere = require("../models/pepiniere");
+const Pepiniere = require("../models/pepiniere");
+const Campaign=require('../models/campaign');
 require("dotenv").config();
 
 exports.adminLogin = async (req, res) => {
@@ -93,8 +94,8 @@ exports.forgotPassword = async (req, res) => {
       admin.resetPasswordToken = resetToken;
       admin.resetPasswordExpires = Date.now() + 3600000; // Token expires in 1 hour
   
-      // ✅ FIX: Save the updated admin document
-      await admin.save(); // <-- This line ensures the database is updated
+      
+      await admin.save(); //to update a database
   
       // Send email
       const transporter = nodemailer.createTransport({
@@ -150,19 +151,23 @@ exports.resetPassword=async(req,res)=>{
 
 exports.pendingPepinieres=async(req,res)=>{
     try{
-        const pendingPepinieres=await findOne({status:"pending"});
+        const pendingPepinieres=await Pepiniere.find({status:"pending"});
         res.json(pendingPepinieres);
     }catch(error){
-        res.status(500).json({message:"Srver error",error});
+        res.status(500).json({message:"Server error",error});
     }
 };
 
 exports.approve=async(req,res)=>{
     try{
-        const pepinieres=await Pepiniere.findOneAndUpdate(req.params.id,{status:"approved",new:true});
+       const pepiniere = await Pepiniere.findOneAndUpdate(
+        { _id: req.params.id },
+        { status: "approved" },  
+        { new: true }            
+      );
 
         if(!pepiniere){
-            res.status(404).json({message:"Pépinière not found"});
+            return res.status(404).json({message:"Pépinière not found"});
         }
 
         res.json({ message: "Pépinière approved", pepiniere });
@@ -173,10 +178,10 @@ exports.approve=async(req,res)=>{
 
 exports.reject=async(req,res)=>{
     try{
-        const pepinieres=await Pepiniere.findOneAndUpdate(req.params.id,{status:"rejected",new:true});
+        const pepiniere=await Pepiniere.findOneAndUpdate({ _id: req.params.id },{ status: "rejected" },{ new: true } );
 
         if(!pepiniere){
-            res.status(404).json({message:"Pépinière not found"});
+            return res.status(404).json({message:"Pépinière not found"});
         }
 
         res.json({ message: "Pépinière rejected", pepiniere });
@@ -188,16 +193,14 @@ exports.reject=async(req,res)=>{
 exports.allPepinieres=async(req,res)=>{
     try{
         const approvedPepinieres=await Pepiniere.find({status : "approved"});
-        if(!approvedPepinieres){
-            res.json(approvedPepinieres);
-        }
+        res.json({ success: true, data: approvedPepinieres });
     }catch(error)
     {
         res.status(500).json({ message: "Server error", error });
     }
 };
 
-exports.pepiniere=async(req,res)=>{
+exports.onePepiniere=async(req,res)=>{
     try{
         const pepiniere=await Pepiniere.findById(req.params.id);
 
@@ -224,5 +227,29 @@ exports.deletePepiniere=async(req,res)=>{
         res.status(500).json({ message: "Server error", error });
     }
 };
+
+// creation and management of a campaign 
+
+exports.createCampaign=async(req,res)=>{
+  try{
+    const {title,description,date,time,maxParticipants}=req.body;
+
+    if(!title || !description || !date || !time || !maxParticipants){
+      return res.status(400).json({message:"All fields are required"});
+    }
+
+    const campaign=new Campaign({
+      title,description,date,time,maxParticipants
+    });
+
+    await campaign.save();
+    res.status(201).json({ message: "Campaign created successfully", campaign });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error });
+  }
+};
+  
+
+
 
 
