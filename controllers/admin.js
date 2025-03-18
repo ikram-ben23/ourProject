@@ -125,7 +125,23 @@ exports.forgotPassword = async (req, res) => {
 exports.resetPassword=async(req,res)=>{
     try{
         const {token}=req.params;
-        const {newPassword}=req.body;
+        const {newPassword,confirmPassword}=req.body;
+
+        if (!newPassword || !confirmPassword) {
+          return res.status(400).json({ message: "Both password fields are required" });
+        }
+
+         // Check if passwords match
+        if (newPassword !== confirmPassword) {
+            return res.status(400).json({ message: "Passwords do not match" });
+        }
+
+        const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+        if (!passwordRegex.test(newPassword)) {
+            return res.status(400).json({ 
+                message: "Password must be at least 8 characters long, contain at least one letter, one number, and one special character (@$!%*?&)"
+        });
+        }
 
         const admin = await Admin.findOne({
             resetPasswordToken: token,
