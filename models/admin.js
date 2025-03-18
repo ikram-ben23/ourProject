@@ -8,7 +8,7 @@ const adminSchema=new mongoose.Schema({
     password:{type:String,required:true},
     //profilePicture:{type:String},
     role:{type:String,default:"admin"},
-    createdAt:{type:Date,default:Date.now},
+    createdAt:{type:String,default:Date.now},
     resetPasswordToken: { type: String }, 
     resetPasswordExpires: { type: Date } 
 

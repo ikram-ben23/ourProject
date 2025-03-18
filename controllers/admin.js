@@ -232,15 +232,17 @@ exports.deletePepiniere=async(req,res)=>{
 
 exports.createCampaign=async(req,res)=>{
   try{
-    const {title,description,date,time,maxParticipants}=req.body;
+    const {title,description,location,date,time,maxParticipants}=req.body;
 
-    if(!title || !description || !date || !time || !maxParticipants){
+    if(!title || !description || !location || !date || !time || !maxParticipants){
       return res.status(400).json({message:"All fields are required"});
     }
 
     const campaign=new Campaign({
-      title,description,date,time,maxParticipants
+      title,description,location,date,time,maxParticipants,
     });
+
+
 
     await campaign.save();
     res.status(201).json({ message: "Campaign created successfully", campaign });
@@ -248,7 +250,65 @@ exports.createCampaign=async(req,res)=>{
     res.status(500).json({ message: "Server error", error });
   }
 };
-  
+
+exports.allCampaigns=async(req,res)=>{
+  try{
+    const campaigns=await Campaign.find().sort({date:-1});//fetch campaign from data base
+    if (campaigns.length === 0) {
+      return res.status(404).json({ message: "No campaigns found" });
+    }
+
+    return res.status(200).json(campaigns); 
+  }catch(error){
+    res.status(500).json({ message: "Server error", error });
+  }
+};
+
+exports.oneCampaign=async(req,res)=>{
+  try{
+    const campaign=await Campaign.findById(req.params.id);
+    if(!campaign){
+      return res.status(404).json({message:"Campaign not found"});
+    }
+    return res.status(200).json(campaign);
+  }catch(error){
+    res.status(500).json({message:"Server error",error});
+  }
+};
+
+exports.editCampaign=async(req,res)=>{
+  try{
+    const {id}=req.params.id;
+    const updates=req.body;
+
+
+    const updatedCampaign=await Campaign.findByIdAndUpdate(id, updates,{
+      new:true,
+      runValidators:true
+    });
+
+    if(!updatedCampaign){
+      return res.status(404).json({message:"Campaign not found"});
+    }
+
+    return res.status(200).json({message:"Campaign updated successfully",updatedCampaign});
+  }catch(error){
+    res.status(500).json({message:"Server error",error});
+  }
+};
+
+exports.deleteCampaign=async(req,res)=>{
+  try{
+    const campaign=await Campaign.findByIdAndDelete(req.params.id);
+    if(!campaign){
+      return res.status(404).json({message:"Campaign not found"});
+    }
+
+    return res.status(200).json({message:"Campaign deleted"});
+  }catch(error){
+    return res.status(500).json({message:"Server error",error});
+  }
+}
 
 
 

@@ -17,10 +17,10 @@ router.delete('/delete/:id',adminController.deletePepiniere);//delete only for a
 
 // Campaign Management Routes
 router.post('/createCampaign', adminController.createCampaign);
-router.get('/campaigns', /*get all compaigns */);
-router.get('/campaigns/:id', /*get all compaigns by id */);
-router.put('/campaigns/:id', /*update compaign */);
-router.delete('/campaigns/:id', /*delete comapign */);
+router.get('/campaigns', adminController.allCampaigns);
+router.get('/getCampaign/:id',adminController.oneCampaign);
+router.put('/editCampaign/:id', adminController.editCampaign);
+router.delete('/deleteCampaign/:id', adminController.deleteCampaign);
 
 // Volunteer Management Routes 
 router.get('/campaigns/:id/volunteers',/*get all volunteers*/);
