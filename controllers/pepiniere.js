@@ -262,6 +262,38 @@ exports.resetPasswordPepiniere=async(req,res) => {
 };
 
 
+exports.updatePepiniere=async(req,res)=>{
+    try{
+        const pepiniereId=req.pepiniere.id;
+        const updates=req.body;
+
+        const updatedPepiniere=await Pepiniere.findByIdAndUpdate(pepiniereId,updates,{
+            new: true,
+            runValidators: true
+        });
+    
+
+        return res.status(200).json(updatedPepiniere);
+    }catch (error) {
+    res.status(500).json({ message: "Server error", error });
+  }
+};
+
+exports.deletePepiniere=async(req,res)=>{
+    try{
+        const pepiniereId=req.pepiniere.id;
+        const deletedPepiniere=await Pepiniere.findByIdAndDelete(pepiniereId);
+
+        if(!deletedPepiniere){
+            return res.status(404).json({message:"Pépinière not found"});    
+        }
+        await Product.deleteMany({ pepiniere: pepiniereId });
+            res.status(200).json({ message: "Pépinière deleted successfully" });
+    } catch (error) {
+            res.status(500).json({ message: "Server error", error });
+}
+};
+
 /*
 exports.registerPepiniere = async (req, res) => {
     try {

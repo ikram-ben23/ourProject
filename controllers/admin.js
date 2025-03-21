@@ -267,7 +267,7 @@ exports.createCampaign=async(req,res)=>{
   }
 };
 
-exports.allCampaigns=async(req,res)=>{
+/*exports.allCampaigns=async(req,res)=>{
   try{
     const campaigns=await Campaign.find().sort({date:-1});//fetch campaign from data base
     if (campaigns.length === 0) {
@@ -277,6 +277,21 @@ exports.allCampaigns=async(req,res)=>{
     return res.status(200).json(campaigns); 
   }catch(error){
     res.status(500).json({ message: "Server error", error });
+  }
+};*/
+
+exports.allCampaigns = async (req, res) => {
+  try {
+    const campaigns = await Campaign.find().sort({ date: -1 });
+
+    if (!campaigns || campaigns.length === 0) {
+      return res.status(404).json({ message: "No campaigns found" });
+    }
+
+    return res.status(200).json(campaigns);
+  } catch (error) {
+    console.error("Error fetching campaigns:", error);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
@@ -294,7 +309,7 @@ exports.oneCampaign=async(req,res)=>{
 
 exports.editCampaign=async(req,res)=>{
   try{
-    const {id}=req.params.id;
+    const id=req.params.id;
     const updates=req.body;
 
 
