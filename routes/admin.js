@@ -22,9 +22,6 @@ router.get('/getCampaign/:id',adminController.oneCampaign);
 router.put('/editCampaign/:id', adminController.editCampaign);
 router.delete('/deleteCampaign/:id', adminController.deleteCampaign);
 
-// Volunteer Management Routes 
-//router.get('/campaigns/:id/volunteers',/*get all volunteers*/);
-//router.put('/campaigns/:campaignId/approve-volunteer/:volunteerId', /*approve vulunteer */);
 
 // Admin Dashboard & Statistics
 router.get('/dashboard/statistics',);//get admin statistics

@@ -6,6 +6,7 @@ const crypto=require("crypto");
 const { findOne } = require("../models/pepiniere");
 const Pepiniere = require("../models/pepiniere");
 const Campaign=require('../models/campaign');
+const Product = require("../models/Product");
 require("dotenv").config();
 
 exports.adminLogin = async (req, res) => {
@@ -340,6 +341,58 @@ exports.deleteCampaign=async(req,res)=>{
     return res.status(500).json({message:"Server error",error});
   }
 }
+
+
+
+//not tested yet 
+exports.getAdminDashboardStats = async (req, res) => {
+    try {
+        // Total number of campaigns
+        const totalCampaigns = await Campaign.countDocuments();
+
+        // Total number of approved pépinières
+        const approvedPepinieres = await Pepiniere.countDocuments({ isApproved: true });
+
+        // Total number of products
+        const totalProducts = await Product.countDocuments();
+
+        // Total number of volunteers (participants in campaigns)
+        const totalVolunteers = await Campaign.aggregate([
+            { $unwind: "$participants" },
+            { $count: "totalVolunteers" }
+        ]);
+
+        // Pie Chart Data: Count of approved, pending, rejected
+        const pepiniereStatusCounts = await Pepiniere.aggregate([
+            {
+                $group: {
+                    _id: "$status", // assuming status: 'approved' | 'pending' | 'rejected'
+                    count: { $sum: 1 }
+                }
+            }
+        ]);
+
+        // Bar Graph: Campaigns with the highest number of registered participants (Top 5)
+        const topCampaigns = await Campaign.find({})
+            .sort({ registeredParticipants: -1 })
+            .limit(5)
+            .select("title registeredParticipants");
+
+        res.json({
+            totalCampaigns,
+            approvedPepinieres,
+            totalProducts,
+            totalVolunteers: totalVolunteers.length ? totalVolunteers[0].totalVolunteers : 0,
+            pepiniereStatusChart: pepiniereStatusCounts,
+            topCampaignsBarChart: topCampaigns
+        });
+    } catch (err) {
+        console.error("Error in admin stats:", err);
+        res.status(500).json({ message: "Failed to load dashboard statistics." });
+    }
+};
+
+
 
 
 

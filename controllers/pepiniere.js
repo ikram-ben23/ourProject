@@ -161,10 +161,72 @@ exports.loginPepiniere = async (req, res) => {
             }
         });
 
+        console.log("Generated Token:", token);
+
     } catch (error) {
         res.status(500).json({ error: "Server error" });
     }
 };
+
+
+//this is the new one
+/*
+exports.loginPepiniere = async (req, res) => {
+    try {
+        const { email, password } = req.body;
+
+        // Check if email and password are provided
+        if (!email || !password) {
+            return res.status(400).json({ error: "Email and password are required" });
+        }
+
+        // Find the Pépinière by email (ignore case sensitivity)
+        const pepiniere = await Pepiniere.findOne({ email: email.trim().toLowerCase() });
+        if (!pepiniere) {
+            return res.status(400).json({ error: "Invalid email or password" });
+        }
+
+        // Compare password with the stored hashed password
+        const isMatch = await bcrypt.compare(password, pepiniere.password);
+        if (!isMatch) {
+            return res.status(400).json({ error: "Invalid email or password" });
+        }
+
+        // Generate JWT Token (always generate token)
+        const token = jwt.sign(
+            { id: pepiniere._id, role: "pepiniere", status: pepiniere.status },
+            process.env.SECRET_KEY,
+            { expiresIn: "7d" }
+        );
+
+        // Prepare the response message
+        let message = "Login successful";
+        if (pepiniere.status !== "approved") {
+            message = "Your account is not approved yet. Please wait for admin approval.";
+        }
+
+
+        // Return the response with the token, message, and user info
+        return res.status(200).json({
+            message,
+            token, // Send the token to the client
+            user: {
+                id: pepiniere._id,
+                name: pepiniere.name,
+                ownerName: pepiniere.ownerName,
+                email: pepiniere.email,
+                phone: pepiniere.phone,
+                profilePicture: pepiniere.profilePicture,
+                status: pepiniere.status
+            }
+        });
+
+    } catch (error) {
+        console.error("Login error:", error);
+        res.status(500).json({ error: "Server error" });
+    }
+};
+*/
 
 //nodemailer transporter
 
@@ -218,7 +280,56 @@ exports.forgotPassword=async(req,res)=>{
 
 //reset password verifying token and reset password
 
-exports.resetPasswordPepiniere=async(req,res) => {
+exports.resetPasswordPepiniere = async (req, res) => {
+    try {
+      const { token, newPassword, confirmPassword } = req.body;
+      
+      if (!token || !newPassword || !confirmPassword) {
+        return res.status(400).json({ error: "All fields are required" });
+      }
+  
+      // Check if passwords match
+      if (newPassword !== confirmPassword) {
+        return res.status(400).json({ error: "Passwords do not match" });
+      }
+  
+      // Validate password strength
+      const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+      if (!passwordRegex.test(newPassword)) {
+        return res.status(400).json({
+          error: "Password must be at least 8 characters long and include at least one uppercase letter, one lowercase letter, one number, and one special character."
+        });
+      }
+  
+      // Hash the token and find the user
+      const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+      const user = await Pepiniere.findOne({
+        resetPasswordToken: hashedToken,
+        resetPasswordExpires: { $gt: Date.now() }, // Check if token is not expired
+      });
+  
+      if (!user) {
+        return res.status(400).json({ error: "Invalid or expired token" });
+      }
+  
+      // Hash the new password
+      const salt = await bcrypt.genSalt(10);
+      user.password = await bcrypt.hash(newPassword, salt);
+  
+      // Remove the reset token after successful reset
+      user.resetPasswordToken = undefined;
+      user.resetPasswordExpires = undefined;
+  
+      await user.save();
+  
+      res.json({ message: "Password reset successful!" });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: "Server error" });
+    }
+  };
+  
+/*exports.resetPasswordPepiniere=async(req,res) => {
     try{
         const{token,newPassword}=req.body;
         if(!token || !newPassword) return res.status(400).json({error:"All fields are required"});
@@ -259,10 +370,10 @@ exports.resetPasswordPepiniere=async(req,res) => {
         res.status(500).json({ error: "Server error" });
     }
     
-};
+};*/
 
 
-exports.updatePepiniere=async(req,res)=>{
+/*exports.updatePepiniere=async(req,res)=>{
     try{
         const pepiniereId=req.pepiniere.id;
         const updates=req.body;
@@ -277,7 +388,93 @@ exports.updatePepiniere=async(req,res)=>{
     }catch (error) {
     res.status(500).json({ message: "Server error", error });
   }
+};*/
+
+
+exports.updatePepiniere = async (req, res) => {
+    try {
+        const pepiniereId = req.pepiniere.id;
+        const updates = req.body;
+
+        // Allowed fields to update
+        const allowedUpdates = ['location', 'phone', 'ownerName', 'name', 'email', 'password'];
+
+        // Check for invalid fields in the request body
+        const invalidFields = Object.keys(updates).filter((field) => !allowedUpdates.includes(field));
+        if (invalidFields.length) {
+            return res.status(400).json({ error: `Invalid fields: ${invalidFields.join(', ')}` });
+        }
+
+        // Handle Email Update Flow
+        if (updates.email) {
+            // Step 1: Authenticate current email (optional step for double-check)
+            if (!req.pepiniere.email) {
+                return res.status(400).json({ error: "Please provide a valid current email" });
+            }
+
+            // Step 2: Validate new email format
+            if (!validator.isEmail(updates.email)) {
+                return res.status(400).json({ error: "Invalid email format" });
+            }
+
+            // Step 3: Send verification email (Assume a sendVerificationEmail function exists)
+            const verificationCode = crypto.randomBytes(20).toString('hex');
+            await sendVerificationEmail(updates.email, verificationCode);
+
+            // Step 4: Verify code provided by the user
+            if (!updates.verificationCode || updates.verificationCode !== verificationCode) {
+                return res.status(400).json({ error: "Invalid or expired verification code" });
+            }
+
+            // Step 5: If verification is successful, update the email in the database
+            const updatedPepiniere = await Pepiniere.findByIdAndUpdate(pepiniereId, { email: updates.email }, { new: true });
+            return res.status(200).json({ message: "Email updated successfully", updatedPepiniere });
+        }
+
+        // Handle Password Update Flow
+        if (updates.password) {
+            // Step 1: Authenticate current password
+            const isMatch = await bcrypt.compare(updates.currentPassword, req.pepiniere.password);
+            if (!isMatch) {
+                return res.status(400).json({ error: "Current password is incorrect" });
+            }
+
+            // Step 2: Validate new password strength
+            const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+            if (!passwordRegex.test(updates.password)) {
+                return res.status(400).json({
+                    error: "Password must be at least 8 characters long and include at least one uppercase letter, one lowercase letter, one number, and one special character."
+                });
+            }
+
+            // Step 3: Hash the new password and update
+            const salt = await bcrypt.genSalt(10);
+            updates.password = await bcrypt.hash(updates.password, salt);
+
+            const updatedPepiniere = await Pepiniere.findByIdAndUpdate(pepiniereId, { password: updates.password }, { new: true });
+            return res.status(200).json({ message: "Password updated successfully", updatedPepiniere });
+        }
+
+        // Update other fields (location, phone, ownerName, name)
+        const updatedPepiniere = await Pepiniere.findByIdAndUpdate(pepiniereId, updates, { new: true, runValidators: true });
+        if (!updatedPepiniere) {
+            return res.status(404).json({ error: "Pépinière not found" });
+        }
+
+        return res.status(200).json(updatedPepiniere);
+
+    } catch (error) {
+        res.status(500).json({ message: "Server error", error });
+    }
 };
+
+// Helper function to send verification email
+async function sendVerificationEmail(email, verificationCode) {
+    // Simulating sending email
+    console.log(`Sending verification code ${verificationCode} to email: ${email}`);
+    // Implement actual email sending logic here (e.g., using nodemailer)
+}
+
 
 exports.deletePepiniere=async(req,res)=>{
     try{

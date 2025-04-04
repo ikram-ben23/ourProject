@@ -1,0 +1,13 @@
+{
+	"folders": [
+		{
+			"name": "backendprojet",
+			"path": ".."
+		},
+		{
+			"name": "merged backend project",
+			"path": "../../../merged backend project"
+		}
+	],
+	"settings": {}
+}

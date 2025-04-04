@@ -6,7 +6,7 @@ const adminSchema=new mongoose.Schema({
     name:{required:true,type:String,default:"super admin"},
     email:{type: String,unique:true,required:true},
     password:{type:String,required:true},
-    //profilePicture:{type:String},
+    profilePicture:{type:String},
     role:{type:String,default:"admin"},
     createdAt:{type:String,default:Date.now},
     resetPasswordToken: { type: String }, 
