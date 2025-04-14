@@ -44,9 +44,9 @@ app.get("/", (req, res) => {
 
 app.use("/api/cart", cartRoutes);
 app.use("/api/order", orderRoutes);
-app.use("/apiproducts", productRoutes);
-app.use("/pepiniere", pepiniereRoutes); 
-app.use("/admin",adminRoutes);
+app.use("/api/products", productRoutes);
+app.use("/api/pepiniere", pepiniereRoutes); 
+app.use("/api/admin",adminRoutes);
 
 // Start the server
 app.listen(PORT, () => {

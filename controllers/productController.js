@@ -4,17 +4,17 @@ const User = require ("../models/User");
 
 const addProduct = async(req,res) =>{
 try {
-    const {name , description , price, stock , pepiniereName,category  }= req.body;
-    if (!name || !description || !price || !stock || !pepiniereName ){
+    const {name , description , price, stock,pepiniereName,category  }= req.body;
+    if (!name || !description || !price || !stock || !pepiniereName|| !category ){
          return res.status(StatusCodes.BAD_REQUEST).json({error: "All fields are required"});   
     }
     if (price <= 0 || stock <0){
         return res.status(StatusCodes.BAD_REQUEST).json({error: "Invalid price or stock" });
     }
-    const  pepiniere = await User.findById(req.user.id);
+   /* const  pepiniere = await User.findById(req.user.id);
     if(!pepiniere){
         return res.status(StatusCodes.FORBIDDEN).json({error :"Only pepiniere can add products"});
- }
+ }*/
  let product = await Product.findOne({name, pepiniere: req.user.id});
  if (product ){
     product.stock+=stock;
@@ -65,18 +65,18 @@ res.status(StatusCodes.OK).json({message : "Product deleted successfully"});
             const userId = req.user.id;
             const { name, description, price, stock, pepiniereName ,category} = req.body;
     
-            // Trouver le produit
+            
             const product = await Product.findById(productId);
             if (!product) {
                 return res.status(StatusCodes.NOT_FOUND).json({ error: "Produit non trouvé" });
             }
     
-            // Vérifier si l'utilisateur est le propriétaire du produit
+            
             if (product.pepiniere.toString() !== userId) {
                 return res.status(StatusCodes.FORBIDDEN).json({ error: "Non autorisé à modifier ce produit" });
             }
     
-            // Vérifier et mettre à jour uniquement les champs fournis
+        
             if (name) product.name = name;
             if (description) product.description = description;
             if (  price !== undefined) {
@@ -93,12 +93,11 @@ res.status(StatusCodes.OK).json({message : "Product deleted successfully"});
             }
             if (pepiniereName) product.pepiniereName = pepiniereName;
             if (category) product.category = category;
-            // Mise à jour de l'image si une nouvelle est envoyée
+            
             if (req.file) {
                 product.image = req.file.filename;
             }
     
-            // Sauvegarde du produit modifié
             await product.save();
             res.status(StatusCodes.OK).json({ message: "Produit mis à jour avec succès", product });
         } catch (error) {
@@ -137,6 +136,26 @@ res.json(myproduct);
         res.status(500).json({error : error.message});
     }  
  };
-    
+    const getAllProducts = async(req,res)=>{
+        try{
+            const AllProduct =await Product.find();
+            res.json(AllProduct);
+        }
+        catch(error){
+            res.status(500).json({error : error.message});
+        }
+    };
+ const searchByName = async (req,res)=>{
+    const {name} =req.query;
+    try {
+    const products = await Product.find({
+        name: { $regex: name, $options: "i" } // "i" makes it case-insensitive
+    });
 
-module.exports = { deleteProduct, addProduct, updateProduct, getProductsByCategory,getMyProducts} ;
+   res.json(products); }
+   catch(error){
+    res.status(500).json({error : error.message});
+   }
+ };
+
+module.exports = { deleteProduct, addProduct, updateProduct, getProductsByCategory,getMyProducts,getAllProducts,searchByName} ;

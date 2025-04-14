@@ -10,6 +10,7 @@ const pepiniereSchema = new mongoose.Schema({
     description: { type: String },
     password: { type: String, required: true },
     profilePicture:{type: String },
+   // role: { type: String, enum: ["client", "pepiniere", "admin"], default: "pepiniere" },
     status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
     createdAt: { type: Date, default: Date.now },
     rejection:{type:String,default:null},//modify it apres

@@ -54,3 +54,33 @@ catch (error){
         res.status(500).json({error: error.message});
     }
  };
+ exports.decrementQuantity= async (req, res) => {
+    const { product } = req.params; 
+    const sessionId = req.sessionID;
+  
+    try {
+      const cart = await Cart.findOne({ sessionId });
+  
+      if (!cart) return res.status(404).json({ error: "Cart not found" });
+  
+      const itemIndex = cart.items.findIndex(item => item.product.toString() === product);
+  
+      if (itemIndex === -1) {
+        return res.status(404).json({ error: "Product not found in cart" });
+      }
+  
+      if (cart.items[itemIndex].quantity > 1) {
+        cart.items[itemIndex].quantity -= 1;
+      } else {
+        
+        cart.items.splice(itemIndex, 1);
+      }
+  
+      await cart.save();
+  
+      res.json(cart);
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  };
+  
