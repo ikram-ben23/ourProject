@@ -26,13 +26,20 @@ app.use(express.json());
 app.use(cors());
 app.use("/uploads", express.static("uploads"));
 
-// Configuration de la session
+//configuration de la session
 app.use(session({
     secret: process.env.SESSION_SECRET || "supersecret",
     resave: false,
     saveUninitialized: true,
-    cookie: { secure: false } // Mettre true si HTTPS
+    cookie: {
+        httpOnly: true,        // Prevent JavaScript from accessing cookies
+        secure: process.env.NODE_ENV === 'production', // Set this to true in production to use HTTPS only
+        maxAge: 1000 * 60 * 60 * 24, // Session expiration (1 day in this case)
+    },// Mettre true si HTTPS
 }));
+
+
+
 
 // Routes
 app.get("/", (req, res) => {

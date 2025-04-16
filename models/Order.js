@@ -1,5 +1,6 @@
 const mongoose = require("mongoose");
 const orderSchema = new mongoose.Schema({
+    sessionId:{type : String},
     items : [ {
         product : { type : mongoose.Schema.Types.ObjectId , ref: "Product", required: true},
         quantity : { type : Number , required : true , min : 1}
@@ -17,3 +18,4 @@ pepinier : {type:  mongoose.Schema.Types.ObjectId, ref: "User", required: true }
 
 });
 module.exports = mongoose.model("Order",orderSchema);
+

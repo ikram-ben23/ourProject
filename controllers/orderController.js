@@ -48,15 +48,15 @@ res.status(StatusCodes.CREATED).json({ message: "Order placed successfully.", or
 }
 };
  const sendOrderEmail = async (pepiniereId,order)=>{
-    const user = await User.findById(pepinierId);
-    if (!user || ! user.email) return;
+    const pepiniere = await pepiniere.findById(pepinierId);
+    if (!pepiniere || ! pepiniere.email) return;
     const transporter = nodemailer.createTransport({
         service : "gmail",
-        auth :  { user : process.env.EMAIL, pass : process.env.EMAIL_PASSWORD}
+        auth :  {  user: process.env.EMAIL, pass : process.env.EMAIL_PASSWORD}
       });
       const mailOptions = {
         from: process.env.EMAIL,
-        to: user.email,
+        to: pepinier.email,
         subject: "New Order Received",
         text: `A new order has been placed. ID: ${order._id}, Total Amount: ${order.totalPrice}.`
     };
@@ -97,4 +97,4 @@ res.status(StatusCodes.CREATED).json({ message: "Order placed successfully.", or
     res.status(500).json({error : error.message});
  }
 
- }
+ };

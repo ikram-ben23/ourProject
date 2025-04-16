@@ -130,7 +130,7 @@ res.status(StatusCodes.OK).json({message : "Product deleted successfully"});
     const getMyProducts = async (req, res) =>{
     try {
 const myProduct = await Product.find({pepiniere : req.user.id});
-res.json(myproduct);
+res.json(myProduct);
 
     }catch(error){
         res.status(500).json({error : error.message});

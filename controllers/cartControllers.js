@@ -4,7 +4,7 @@ const Product = require("../models/Product");
 
 exports.addToCart = async (req,res) => {
     const { productId , quantity}=req.body;
-    const sessionId = req.sessionID;
+    const sessionId= req.sessionID;
 try {
 
 const product = await Product.findById(productId);
@@ -28,15 +28,16 @@ if (!cart){
 catch (error){
     res.status(500).json({error : error.message});
 }
-}
+};
  exports.removeFromCart = async (req,res)=>{
-    const {product } = req.params;
-    const sessionID = req.sessionID;
+    const {productId } = req.params;
+    const sessionId= req.sessionID;
     try { 
         const cart = await Cart.findOne({ sessionId});
         if (! cart ) return res.status(404).json({error :"cart not found" });
-        cart.items = cart.items.filter(item => item.product.toString !==productId);
-         await cart.save();$
+        cart.items = cart.items.filter(item => item.product.equals(productId));
+         await cart.save();
+         res.status(200).json({message:"product remove from cart successfully"});
          res.json(cart);
 
     }
@@ -44,26 +45,30 @@ catch (error){
         res.status(500).json({error: error.message});
     }
  };
+ 
+
  exports.getCart = async (req,res)=>{
-    const sessionID = req.sessionID;
+    const sessionId = req.sessionID;
     try {
-        const cart = await Cart.findOne({sessionID}).populate("items.product");
+        const cart = await Cart.findOne({sessionId}).populate("items.product");
         if (!cart ) return res.status(404).json({error : "empty cart "});
         res.json(cart);
     } catch (error){
         res.status(500).json({error: error.message});
     }
  };
+
  exports.decrementQuantity= async (req, res) => {
-    const { product } = req.params; 
-    const sessionId = req.sessionID;
+   const { productId } = req.params; 
+   
+    const sessionId= req.sessionID;
   
     try {
-      const cart = await Cart.findOne({ sessionId });
+      const cart = await Cart.findOne({ sessionId});
   
       if (!cart) return res.status(404).json({ error: "Cart not found" });
   
-      const itemIndex = cart.items.findIndex(item => item.product.toString() === product);
+      const itemIndex = cart.items.findIndex(item => item.product.equals(peoduxtId));
   
       if (itemIndex === -1) {
         return res.status(404).json({ error: "Product not found in cart" });
